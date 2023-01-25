@@ -1,7 +1,7 @@
 import zipfile
 import sqlite3
 import json
-
+from andor_asc import load_andor_asc
 import cnst as c
 
 con = sqlite3.connect(c.DBFILE)
@@ -135,7 +135,7 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
     exp20220119 = [
         [dark05, darkForWhite07, white06, c.AIR, c.S_POL, '006'],
         [dark06, darkForWhite08, white07, c.AIR, c.P_POL, '007'],
-        [dark06, darkForWhite08, white07, c.H2O, c.P_POL, '009'],
+        [dark06, darkForWhite08, white07, c.H2O, c.P_POL, '008'],
         [dark06, darkForWhite08, white06, c.H2O, c.S_POL, '009'],
         [dark06, darkForWhite08, white06, c.NaCl_10, c.S_POL, '011'],
         [dark06, darkForWhite08, white07, c.NaCl_10, c.P_POL, '012'],
@@ -143,7 +143,34 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
         [dark06, darkForWhite08, white06, c.NaCl_22, c.S_POL, '014']
     ]
     for exp in exp20220119:
-        print(exp)
+        cur.execute(f"""UPDATE {c.EXPERIMENTS_TABLE} SET
+            {c.COL_DARK} = ?,
+            {c.COL_DARK_FOR_WHITE} = ?,
+            {c.COL_WHITE} = ?,
+            {c.COL_MEDIUM} = ?,
+            {c.COL_POL} = ?
+        WHERE {c.COL_SERIES} = ? """,
+                    exp)
+        if cur.rowcount != 1:
+            print(exp)
+
+        for pol in (c.S_POL, c.P_POL):
+            print(pol)
+            cur.execute(
+                f"""SELECT 
+                {c.COL_SERIES},
+                {c.COL_DARK},
+                {c.COL_DARK_FOR_WHITE},
+                {c.COL_WHITE},
+                {c.COL_MEDIUM}
+                FROM {c.EXPERIMENTS_TABLE} WHERE {c.COL_POL} = ?
+                ORDER BY {c.COL_SERIES}""", [pol])
+            for rez_sel_exp in cur.fetchall():
+                print(rez_sel_exp)
+                raw_dark = load_andor_asc('', spectra_zf.read(rez_sel_exp[1]))
+
+                
+
 
 # cur.execute(f"""CREATE TABLE IF NOT EXISTS {c.EXPERIMENTS_TABLE}(
 #    {c.COL_SERIES} TEXT PRIMARY KEY,
@@ -161,9 +188,9 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
 #('Pec_kartejuma_caur_stiklu_1802/experiments/011/00217.asc', 'spectrum', '011', '00217.asc')
 quit()
 # print()
-cur.execute(f"""SELECT * from {c.FILE_TABLE}""")
+#cur.execute(f"""SELECT * from {c.FILE_TABLE}""")
 #cur.execute(f"""SELECT * from {c.SPOTS_TABLE}""")
-#cur.execute(f"""SELECT * from {c.EXPERIMENTS_TABLE}""")
+cur.execute(f"""SELECT * from {c.EXPERIMENTS_TABLE}""")
 results = cur.fetchall()
 for rezult in results:
     print(rezult)
