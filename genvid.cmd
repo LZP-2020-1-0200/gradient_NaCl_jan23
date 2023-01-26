@@ -1,0 +1,1 @@
+..\ffmpeg.exe -framerate 5 -i tmp/frame1%%09d.png -c:v libx264 -pix_fmt yuv420p spektri.mp4
