@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import os
 import numpy as np
 import matplotlib.image as mpimg
+import cv2
 
 OUTFOLDER = 'tmp'
 
@@ -208,8 +209,8 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
     white07 = 'Pec_kartejuma_caur_stiklu_1802/refs/white07.asc'
 
     exp20220119 = [
-        [dark05, darkForWhite07, white06, c.AIR, c.S_POL, '006'],
-        [dark06, darkForWhite08, white07, c.AIR, c.P_POL, '007'],
+        #        [dark05, darkForWhite07, white06, c.AIR, c.S_POL, '006'],
+        #        [dark06, darkForWhite08, white07, c.AIR, c.P_POL, '007'],
         [dark06, darkForWhite08, white07, c.H2O, c.P_POL, '008'],
         [dark06, darkForWhite08, white06, c.H2O, c.S_POL, '009'],
         [dark06, darkForWhite08, white06, c.NaCl_10, c.S_POL, '011'],
@@ -330,13 +331,13 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
                 fig.set_figwidth(16)
 
                 ax1 = plt.subplot2grid(
-                    shape=(4, 4), loc=(0, 0), colspan=3, rowspan=4)
-                ax2 = plt.subplot2grid(shape=(4, 4), loc=(0, 3))
-                ax3 = plt.subplot2grid(shape=(4, 4), loc=(1, 3))
-                ax4 = plt.subplot2grid((4, 4), (2, 3))
-                ax5 = plt.subplot2grid((4, 4), (3, 3))
+                    shape=(3, 3), loc=(0, 0), colspan=2, rowspan=3)
+                ax2 = plt.subplot2grid(shape=(3, 3), loc=(0, 2))
+                ax3 = plt.subplot2grid(shape=(3, 3), loc=(1, 2))
+                ax4 = plt.subplot2grid((3, 3), (2, 2))
+                #ax5 = plt.subplot2grid((3, 3), (3, 3))
 
-                axbmp = [ax2, ax3, ax4, ax5]
+                axbmp = [ax2, ax3, ax4]
                 bmp_n = 0
                 for ser_rez in cur.fetchall():
                     print(ser_rez)
@@ -344,8 +345,9 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
                     medium = ser_rez[2]
                     jpg_file_name = ser_rez[3]
                     print(jpg_file_name)
-                    img = mpimg.imread(jpg_file_name)
-                    axbmp[bmp_n].imshow(img)
+                    original_jpg = mpimg.imread(jpg_file_name)
+                    djusted = cv2.convertScaleAbs(original_jpg, alpha=1.5, beta=50)
+                    axbmp[bmp_n].imshow(djusted)
                     axbmp[bmp_n].axis('off')
                     axbmp[bmp_n].set_title(medium)
 
@@ -356,21 +358,23 @@ with zipfile.ZipFile("Pec_kartejuma_caur_stiklu_1802.zip", "r") as spectra_zf:
                     raw_spec = load_andor_asc('', spectra_zf.read(ser_rez[1]))
 
                     counts = np.array(raw_spec['col2'])
-                    Q = np.divide(counts-dark, ref)
-
-                    ax1.plot(nm, Q, label=medium)
+                    if bmp_n == 0:
+                        Q_water = np.divide(counts-dark, ref)
+                    else:
+                        Q = np.divide(counts-dark, ref)-Q_water
+                        ax1.plot(nm, Q, label=medium)
                     bmp_n += 1
 
                 ax1.set_title(
                     f"{pol}, {spot}, line={line}, xpos={xpos}, ypos={ypos}")
                 ax1.set(xlabel='$\\lambda$, nm')
-                ax1.set(ylabel='counts')
+                ax1.set(ylabel='D(NaCl-H₂0)')
 
                 ax1.set_xlim([min(nm), max(nm)])
                 if pol == c.P_POL:
-                    ax1.set_ylim([0, 0.5])
+                    ax1.set_ylim([0, 0.15])
                 else:
-                    ax1.set_ylim([0, 1.0])
+                    ax1.set_ylim([0, 0.4])
 
                 ax1.legend(loc='upper left')
                 ax1.grid()
